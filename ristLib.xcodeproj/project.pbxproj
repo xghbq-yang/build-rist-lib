@@ -172,7 +172,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A66EA05C29891BE000D89E76 /* librisLib.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = librisLib.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		A66EA05C29891BE000D89E76 /* librist.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = librist.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A66EA06A29891C8B00D89E76 /* vcs_version.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vcs_version.h; sourceTree = "<group>"; };
 		A66EA06C29891C8B00D89E76 /* attributes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = attributes.h; sourceTree = "<group>"; };
 		A66EA06E29891C8B00D89E76 /* peer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = peer.h; sourceTree = "<group>"; };
@@ -463,7 +463,7 @@
 		A66EA05329891BE000D89E76 = {
 			isa = PBXGroup;
 			children = (
-				A66EA05E29891BE000D89E76 /* risLib */,
+				A66EA05E29891BE000D89E76 /* ristLib */,
 				A66EA05D29891BE000D89E76 /* Products */,
 				A66EA2032989218000D89E76 /* Frameworks */,
 			);
@@ -472,17 +472,17 @@
 		A66EA05D29891BE000D89E76 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A66EA05C29891BE000D89E76 /* librisLib.a */,
+				A66EA05C29891BE000D89E76 /* librist.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A66EA05E29891BE000D89E76 /* risLib */ = {
+		A66EA05E29891BE000D89E76 /* ristLib */ = {
 			isa = PBXGroup;
 			children = (
 				A66EA06829891C8B00D89E76 /* RIST */,
 			);
-			path = risLib;
+			path = ristLib;
 			sourceTree = "<group>";
 		};
 		A66EA06829891C8B00D89E76 /* RIST */ = {
@@ -888,9 +888,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A66EA05B29891BE000D89E76 /* risLib */ = {
+		A66EA05B29891BE000D89E76 /* ristLib */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A66EA06529891BE000D89E76 /* Build configuration list for PBXNativeTarget "risLib" */;
+			buildConfigurationList = A66EA06529891BE000D89E76 /* Build configuration list for PBXNativeTarget "ristLib" */;
 			buildPhases = (
 				A66EA05829891BE000D89E76 /* Sources */,
 				A66EA05929891BE000D89E76 /* Frameworks */,
@@ -900,9 +900,9 @@
 			);
 			dependencies = (
 			);
-			name = risLib;
-			productName = risLib;
-			productReference = A66EA05C29891BE000D89E76 /* librisLib.a */;
+			name = ristLib;
+			productName = ristLib;
+			productReference = A66EA05C29891BE000D89E76 /* librist.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
@@ -919,7 +919,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A66EA05729891BE000D89E76 /* Build configuration list for PBXProject "risLib" */;
+			buildConfigurationList = A66EA05729891BE000D89E76 /* Build configuration list for PBXProject "ristLib" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -932,7 +932,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A66EA05B29891BE000D89E76 /* risLib */,
+				A66EA05B29891BE000D89E76 /* ristLib */,
 			);
 		};
 /* End PBXProject section */
@@ -1191,15 +1191,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_BITCODE = YES;
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/risLib/RIST/include\"",
-					"\"$(SRCROOT)/risLib/RIST/contrib/mbedtls/include\"",
+					"\"$(SRCROOT)/ristLib/RIST/include\"",
+					"\"$(SRCROOT)/ristLib/RIST/contrib/mbedtls/include\"",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/risLib/RIST/contrib/mbedtls/library",
+					"$(PROJECT_DIR)/ristLib/RIST/contrib/mbedtls/library",
 				);
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = rist;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1218,15 +1218,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_BITCODE = YES;
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/risLib/RIST/include\"",
-					"\"$(SRCROOT)/risLib/RIST/contrib/mbedtls/include\"",
+					"\"$(SRCROOT)/ristLib/RIST/include\"",
+					"\"$(SRCROOT)/ristLib/RIST/contrib/mbedtls/include\"",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/risLib/RIST/contrib/mbedtls/library",
+					"$(PROJECT_DIR)/ristLib/RIST/contrib/mbedtls/library",
 				);
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = rist;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1235,7 +1235,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A66EA05729891BE000D89E76 /* Build configuration list for PBXProject "risLib" */ = {
+		A66EA05729891BE000D89E76 /* Build configuration list for PBXProject "ristLib" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A66EA06329891BE000D89E76 /* Debug */,
@@ -1244,7 +1244,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A66EA06529891BE000D89E76 /* Build configuration list for PBXNativeTarget "risLib" */ = {
+		A66EA06529891BE000D89E76 /* Build configuration list for PBXNativeTarget "ristLib" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A66EA06629891BE000D89E76 /* Debug */,
