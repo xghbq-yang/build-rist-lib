@@ -412,22 +412,25 @@ static int receiver_insert_queue_packet(struct rist_flow *f, struct rist_peer *p
 	   "Inserting seq %"PRIu32" len %zu source_time %"PRIu32" at idx %zu\n",
 	   seq, len, source_time, idx);
 	   */
+	pthread_rwlock_wrlock(&f->queue_lock);//write lock, //Howard 2023-02-23
 	f->receiver_queue[idx] = rist_new_buffer(get_cctx(peer), buf, len, RIST_PAYLOAD_TYPE_DATA_RAW, seq, source_time, src_port, dst_port);
 	if (RIST_UNLIKELY(!f->receiver_queue[idx])) {
 		rist_log_priv(get_cctx(peer), RIST_LOG_ERROR, "Could not create packet buffer inside receiver buffer, OOM, decrease max bitrate or buffer time length\n");
+		pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 		return -1;
 	}
 	f->receiver_queue[idx]->peer = peer;
 	f->receiver_queue[idx]->packet_time = packet_time;
 	f->receiver_queue[idx]->target_output_time = packet_time + f->recovery_buffer_ticks;
 	atomic_fetch_add_explicit(&f->receiver_queue_size, len, memory_order_release);
-
+	pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 	return 0;
 }
 
 static inline void receiver_mark_missing(struct rist_flow *f, struct rist_peer *peer, uint32_t current_seq, uint32_t rtt) {
 	uint32_t counter = 1;
 	uint64_t packet_time_last = 0;
+	pthread_rwlock_rdlock(&f->queue_lock);//read lock, //Howard 2023-02-23
 	if (RIST_UNLIKELY(!f->receiver_queue[f->last_seq_found]))
 		if (RIST_LIKELY(!f->rtc_timing_mode))
 			packet_time_last = timestampNTP_u64();
@@ -436,6 +439,7 @@ static inline void receiver_mark_missing(struct rist_flow *f, struct rist_peer *
 	else
 		packet_time_last = f->receiver_queue[f->last_seq_found]->packet_time;
 	uint64_t packet_time_now = f->receiver_queue[current_seq]->packet_time;
+	pthread_rwlock_unlock(&f->queue_lock);//unlock,//Howard 2023-02-23
 	uint32_t missing_count = (current_seq - f->last_seq_found) & UINT16_MAX;
 	//arbitrary large number to prevent incorrectly marking packets as missing when wrap-around occurs & we did not correctly detect as out of order
 	if (missing_count > 32768)
@@ -568,6 +572,7 @@ static int receiver_enqueue(struct rist_peer *peer, uint64_t source_time, uint64
 		//this does assume CBR
 		struct rist_buffer *previous = NULL;
 		size_t index = (idx -1)& (f->receiver_queue_max - 1);
+		pthread_rwlock_rdlock(&f->queue_lock);//read lock, //Howard 2023-02-23
 		while (previous == NULL && index != idx)
 		{
 			previous = f->receiver_queue[index];
@@ -580,6 +585,7 @@ static int receiver_enqueue(struct rist_peer *peer, uint64_t source_time, uint64
 			next = f->receiver_queue[index];
 			index = (index +1)& (f->receiver_queue_max -1);
 		}
+		pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 		//interpolate the arrival time, assuming CBR
 		if (next && previous)
 		{
@@ -649,7 +655,9 @@ static int receiver_enqueue(struct rist_peer *peer, uint64_t source_time, uint64
 	}
 	if (RIST_UNLIKELY(f->receiver_queue[idx])) {
 		// TODO: record stats
+        pthread_rwlock_rdlock(&f->queue_lock);//read lock, //Howard 2023-02-23
 		struct rist_buffer *b = f->receiver_queue[idx];
+        pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 		if (b->source_time == source_time) {
 			rist_log_priv(get_cctx(peer), RIST_LOG_DEBUG, "Dupe! %"PRIu32"/%zu\n", seq, idx);
 			pthread_mutex_lock(&(get_cctx(peer)->stats_lock));
@@ -658,12 +666,13 @@ static int receiver_enqueue(struct rist_peer *peer, uint64_t source_time, uint64
 			return 1;
 		}
 		else {
+            pthread_rwlock_wrlock(&f->queue_lock);//write lock, //Howard 2023-02-23 attention 1
 			rist_log_priv(get_cctx(peer), RIST_LOG_DEBUG, "Invalid Dupe (possible seq discontinuity)! %"PRIu32", freeing buffer ...\n", seq);
 			free_rist_buffer(get_cctx(peer), b);
 			f->receiver_queue[idx] = NULL;
+            pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23 attention 2
 		}
 	}
-
 
 	/* Now, we insert the packet into receiver queue */
 	if (receiver_insert_queue_packet(f, peer, idx, buf, len, seq, source_time, src_port, dst_port, packet_time)) {
@@ -840,7 +849,9 @@ static void receiver_output(struct rist_receiver *ctx, struct rist_flow *f)
 	size_t output_idx = atomic_load_explicit(&f->receiver_queue_output_idx, memory_order_acquire);
 	while (atomic_load_explicit(&f->receiver_queue_size, memory_order_acquire) > 0 && atomic_load_explicit(&f->shutdown, memory_order_acquire) == 0) {
 		// Find the first non-null packet in the queuecounter loop
+		pthread_rwlock_rdlock(&f->queue_lock);//read lock, //Howard 2023-02-23
 		struct rist_buffer *b = f->receiver_queue[output_idx];
+		pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 		size_t holes = 0;
 		if (!b) {
 			//rist_log_priv(&ctx->common, RIST_LOG_ERROR, "\tLooking for first non-null packet (%zu)\n", f->receiver_queue_size);
@@ -849,7 +860,9 @@ static void receiver_output(struct rist_receiver *ctx, struct rist_flow *f)
 			while (!b) {
 				counter = (counter + 1)& (f->receiver_queue_max -1);
 				holes++;
+				pthread_rwlock_rdlock(&f->queue_lock);//read lock, //Howard 2023-02-23
 				b = f->receiver_queue[counter];
+				pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 				if (counter == output_idx) {
 					// This should never happen, if this fires queue size is out of sync with reality.
 					rist_log_priv(&ctx->common, RIST_LOG_ERROR, "Did not find any data after a full counter loop (%zu)\n", atomic_load_explicit(&f->receiver_queue_size, memory_order_acquire));
@@ -995,7 +1008,9 @@ static void receiver_output(struct rist_receiver *ctx, struct rist_flow *f)
 			f->last_seq_output = b->seq;
 next:
 			atomic_fetch_sub_explicit(&f->receiver_queue_size, b->size, memory_order_relaxed);
+			pthread_rwlock_wrlock(&f->queue_lock);//write lock, //Howard 2023-02-23
 			f->receiver_queue[output_idx] = NULL;
+			pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
 			free_rist_buffer(&ctx->common, b);
 			output_idx = (output_idx + 1)& (f->receiver_queue_max -1);
 			atomic_store_explicit(&f->receiver_queue_output_idx, output_idx, memory_order_release);
@@ -1078,7 +1093,7 @@ void receiver_nack_output(struct rist_receiver *ctx, struct rist_flow *f)
 	uint32_t seq_msb = 0;
 	if (mb)
 		seq_msb = mb->seq >> 16;
-
+	
 	while (mb) {
 		int remove_from_queue_reason = 0;
 		struct rist_peer *peer = mb->peer;
@@ -1091,7 +1106,14 @@ void receiver_nack_output(struct rist_receiver *ctx, struct rist_flow *f)
 			f->stats_instant.missing--;
 			goto nack_loop_continue;
 		} else if (f->receiver_queue[idx]) {
+            pthread_rwlock_rdlock(&f->queue_lock);//read unlock //Howard 2023-02-23
+            //Howard 2023-02-23 check again -- begin
+            if (NULL == f->receiver_queue[idx]){
+                goto null_receiver_queue_item_flag;//unlock after null_receiver_queue_item_flag
+            }
+            //Howard 2023-02-23 check again -- end
 			if (f->receiver_queue[idx]->seq == mb->seq) {
+                pthread_rwlock_unlock(&f->queue_lock);//unlock //Howard 2023-02-23 attention 4
 				pthread_mutex_lock(&ctx->common.stats_lock);
 				// We filled in the hole already ... packet has been recovered
 				remove_from_queue_reason = 3;
@@ -1120,6 +1142,9 @@ void receiver_nack_output(struct rist_receiver *ctx, struct rist_flow *f)
 				pthread_mutex_unlock(&ctx->common.stats_lock);
 			}
 			else {
+//Howard 2023-02-23 add
+null_receiver_queue_item_flag:
+                pthread_rwlock_unlock(&f->queue_lock);//unlock //Howard 2023-02-23 attention 4
 				// Message with wrong seq!!!
 				rist_log_priv(&ctx->common, RIST_LOG_ERROR,
 						"Retry queue has the wrong seq %"PRIu32" != %"PRIu32", removing ...\n",
@@ -1202,7 +1227,7 @@ nack_loop_continue:
 			mb = mb->next;
 		}
 	}
-
+	
 	// Empty all peer nack queues, i.e. send them
 	send_nack_group(ctx, f);
 

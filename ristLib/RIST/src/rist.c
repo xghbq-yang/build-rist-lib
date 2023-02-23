@@ -194,7 +194,12 @@ int rist_receiver_data_read2(struct rist_ctx *rist_ctx, struct rist_data_block *
 			}
 		} while (num > 0);
 	}
-	assert(!(data_block == NULL && num > 0));
+	//Howard 2023-02-23, Sliver fixed this issue
+	//assert(!(data_block == NULL && num > 0));
+	if (data_block == NULL && num > 0)
+	{
+		return -3;
+	}
 
 	*data_buffer = data_block;
 
@@ -1108,10 +1113,13 @@ static int rist_receiver_destroy(struct rist_receiver *ctx)
 	atomic_store_explicit(&ctx->common.shutdown, 1, memory_order_release);
 	pthread_mutex_lock(&ctx->mutex);
 	bool running = ctx->protocol_running;
+    printf("Howard--rist_receiver_destroy--1--\n");
 	pthread_mutex_unlock(&ctx->mutex);
 	if (running)
 		pthread_join(ctx->receiver_thread, NULL);
+    printf("Howard--rist_receiver_destroy--2--\n");
 	rist_receiver_destroy_local(ctx);
+    printf("Howard--rist_receiver_destroy--end--\n");
 
 	return 0;
 }

@@ -47,6 +47,7 @@ void empty_receiver_queue(struct rist_flow *f, struct rist_common_ctx *ctx)
 	size_t output_queue_idx = atomic_load_explicit(&f->receiver_queue_output_idx, memory_order_acquire);
 	size_t counter = output_queue_idx;
 	while (atomic_load_explicit(&f->receiver_queue_size, memory_order_acquire) > 0) {
+		pthread_rwlock_wrlock(&f->queue_lock);//write lock, //Howard 2023-02-23
 		struct rist_buffer *b = f->receiver_queue[counter];
 		if (b)
 		{
@@ -54,6 +55,8 @@ void empty_receiver_queue(struct rist_flow *f, struct rist_common_ctx *ctx)
 			atomic_fetch_sub_explicit(&f->receiver_queue_size, b->size, memory_order_release);
 			free_rist_buffer(ctx, b);
 		}
+		pthread_rwlock_unlock(&f->queue_lock);//unlock, //Howard 2023-02-23
+
 		counter = (counter + 1) % f->receiver_queue_max;
 		if (counter == output_queue_idx) {
 			// full loop complete
@@ -153,7 +156,8 @@ void rist_delete_flow(struct rist_receiver *ctx, struct rist_flow *f)
 	while (current_flow)
 	{
 		if (current_flow == f) {
-			*prev_flow = current_flow->next;
+			*prev_flow = current_flow->next;			
+			pthread_rwlock_destroy(&f->queue_lock);//Howard 2023-02-23
 			free(current_flow);
 			current_flow = NULL;
 			break;
@@ -224,6 +228,8 @@ static struct rist_flow *create_flow(struct rist_receiver *ctx, uint32_t flow_id
 	rist_flow_append(&ctx->common.FLOWS, f);
 	pthread_mutex_unlock(&ctx->common.flows_lock);
 	f->logging_settings = ctx->common.logging_settings;
+
+	pthread_rwlock_init(&f->queue_lock, NULL);//Howard 2023-02-23
 
 	return f;
 }
